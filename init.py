@@ -68,10 +68,28 @@ def addVectors(angle1, length1, angle2, length2):
 
 
 def findParticle(particles, x, y):
-    print(x, y)
+    # print(x, y)
     for p in particles:
         if math.hypot(p.x - x, p.y - y) <= p.size:
             return p
+
+
+def collide(p1, p2):
+    dx = p1.x - p2.x
+    dy = p1.y - p2.y
+
+    distance = math.hypot(dx, dy)
+    if distance < p1.size + p2.size:
+        tangent = math.atan2(dy, dx)
+        angle = 0.5 * math.pi + tangent
+        p1.x += math.sin(angle)
+        p1.y -= math.cos(angle)
+        p2.x -= math.sin(angle)
+        p2.y += math.cos(angle)
+        p1.angle = 2 * tangent - p1.angle
+        p2.angle = 2 * tangent - p2.angle
+        (p1.speed, p2.speed) = (p2.speed, p1.speed)
+        return p1, p2
 
 
 my_particles = []
@@ -140,7 +158,7 @@ mouse_position_mem.append((0, 0))
 while running:
     if not (mouse_position_mem[-1] == pygame.mouse.get_pos()):
         mouse_position_mem.append(pygame.mouse.get_pos())
-    print(pygame.mouse.get_pos())
+    # print(pygame.mouse.get_pos())
 
     mouse_vector_mem = calculate_vectors(mouse_position_mem)
 
@@ -151,12 +169,9 @@ while running:
             (mouseX, mouseY) = pygame.mouse.get_pos()
             selected_particle = findParticle(my_particles, mouseX, mouseY)
             button_pressesd = 1
-            print(selected_particle)
-            # print ("button pressed")
-            # print (mouseX, mouseY)
+
         if event.type == pygame.MOUSEBUTTONUP:
             button_pressesd = 0
-            # print ("button up")
             prev_mouse_X, prev_mouse_Y = pygame.mouse.get_pos()
 
             # selected_particle = None
@@ -164,27 +179,23 @@ while running:
 
     screen.fill(background_colour)
 
-    for particle in my_particles:
+    for i, particle in enumerate(my_particles):
         if particle != selected_particle:
             particle.move()
             particle.bounce()
+            for particle2 in my_particles[i + 1:]:
+                collide(particle, particle2)
         particle.display()
 
     if selected_particle and button_pressesd:
-        # print ("particle selected")
         (mouseX, mouseY) = pygame.mouse.get_pos()
-        print("particle selected", mouseX, mouseY)
-
-        # print(selected_particle.x,selected_particle.y)
         selected_particle.x = mouseX
         selected_particle.y = mouseY
 
     elif selected_particle and not button_pressesd:
         (mouseX, mouseY) = pygame.mouse.get_pos()
-        print("I am here", mouseX, mouseY)
         dx = prev_mouse_X - mouseX
         dy = prev_mouse_Y - mouseY
-        # pdb.set_trace()
         selected_particle.angle = mouse_vector_mem[-1][1]  # get angle from tuple
         selected_particle.speed = mouse_vector_mem[-1][0]  # get speed from tuple
         selected_particle = None
