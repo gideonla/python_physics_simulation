@@ -28,20 +28,20 @@ Todo:
 """
 
 import math
-import pdb
-import pygame
 import random
 from collections import deque as dq
+
+import pygame
 
 # definition block
 (width, height) = (500, 500)  # screen size
 background_colour = (255, 255, 255)
 number_of_particles = 2
 gravity = (math.pi, 0.001)
-drag = 0.9999  # how much of the particles speed is kept over time
 elasticity = 0.9  # how much elastic energy the ball keeps after collision
 mouse_position_mem = dq(maxlen=5)  # save the last five positions
 mouse_vector_mem = dq(maxlen=5)  # save the last five positions
+mass_of_air = 0.2
 
 
 def calculate_vectors(pos_queue):
@@ -78,31 +78,35 @@ def collide(p1, p2):
     dx = p1.x - p2.x
     dy = p1.y - p2.y
 
-    distance = math.hypot(dx, dy)
-    if distance < p1.size + p2.size:
-        tangent = math.atan2(dy, dx)
-        angle = 0.5 * math.pi + tangent
-        p1.x += math.sin(angle)
-        p1.y -= math.cos(angle)
-        p2.x -= math.sin(angle)
-        p2.y += math.cos(angle)
-        p1.angle = 2 * tangent - p1.angle
-        p2.angle = 2 * tangent - p2.angle
-        (p1.speed, p2.speed) = (p2.speed, p1.speed)
-        return p1, p2
-
+    dist = math.hypot(dx, dy)
+    if dist < p1.size + p2.size:
+        angle = math.atan2(dy, dx) + 0.5 * math.pi
+        total_mass = p1.mass + p2.mass
+        (p1.angle, p1.speed) = addVectors(p1.angle, p1.speed * (p1.mass - p2.mass) / total_mass,
+                                          angle, 2 * p2.speed * p2.mass / total_mass)
+        (p2.angle, p2.speed) = addVectors(p2.angle, p2.speed * (p2.mass - p1.mass) / total_mass,
+                                          angle + math.pi, 2 * p1.speed * p1.mass / total_mass)
+        p1.speed *= elasticity
+        p2.speed *= elasticity
+        overlap = 0.5 * (p1.size + p2.size - dist + 1)
+        p1.x += math.sin(angle) * overlap
+        p1.y -= math.cos(angle) * overlap
+        p2.x -= math.sin(angle) * overlap
+        p2.y += math.cos(angle) * overlap
 
 my_particles = []
 
 
 class Particle:
-    def __init__(self, position, size, speed, angle):
+    def __init__(self, position, size, speed, angle, mass=1, color=(0, 0, 255)):
         self.x, self.y = position
         self.size = size
-        self.colour = (0, 0, 255)
+        self.colour = color
         self.thickness = 1
         self.speed = speed
         self.angle = angle
+        self.mass = mass
+        self.drag = (self.mass / (self.mass + mass_of_air)) ** self.size
 
     def display(self):
         # pdb.set_trace()
@@ -110,11 +114,11 @@ class Particle:
 
     def move(self):
         (self.angle, self.speed) = addVectors(self.angle, self.speed, *gravity)
-        self.speed *= drag
+        self.speed *= self.drag
         self.x += math.sin(self.angle) * self.speed
         self.y -= math.cos(self.angle) * self.speed
 
-    def bounce(self):
+    def bounce(self):  # detect collisions with the walls
         if self.x > width - self.size:
             self.x = 2 * (width - self.size) - self.x
             self.angle = - self.angle
@@ -136,12 +140,15 @@ class Particle:
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption('Tutorial 1')  # change title of window
 
+#generate particles
 for n in range(number_of_particles):
     size = random.randint(10, 20)
+    density = random.randint(1, 20)
     x = random.randint(size, width - size)
     y = random.randint(size, height - size)
-
-    particle = Particle((x, y), size, 0, 0)
+    colour = (200 - density * 10, 200 - density * 10, 200 - density * 10)
+    particle = Particle((x, y), size, 0, 0, density * size ** 2, color=colour)  # calculate mass from density and size
+    # pdb.set_trace()
     particle.speed = 0
     particle.angle = random.uniform(0, math.pi * 2)
 
