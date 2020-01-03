@@ -66,7 +66,7 @@ class Particle:
         self.angle = 0
         self.mass = mass
         self.drag = 1
-        self.elasticity = 0.9
+        self.elasticity = 1
 
     def move(self):
         """ Update position based on speed, angle """
@@ -115,7 +115,7 @@ class Environment:
 
         self.colour = (255, 255, 255)
         self.mass_of_air = 0.2
-        self.elasticity = 0.75
+        self.elasticity = 1
         self.acceleration = (0, 0)
 
         self.particle_functions1 = []
@@ -124,7 +124,9 @@ class Environment:
             'move': (1, lambda p: p.move()),
             'drag': (1, lambda p: p.experienceDrag()),
             'bounce': (1, lambda p: self.bounce(p)),
+            'no_boundry': (1, lambda p: self.no_boundries(p)),
             'accelerate': (1, lambda p: p.accelerate(self.acceleration)),
+            # 'mouse_move': (1, lambda p: p.mouseMove(x,y)),
             'collide': (2, lambda p1, p2: collide(p1, p2)),
             'combine': (2, lambda p1, p2: combine(p1, p2)),
             'attract': (2, lambda p1, p2: p1.attract(p2))}
@@ -157,10 +159,16 @@ class Environment:
 
             self.particles.append(particle)
 
-    def update(self):
+    def update(self, x=None, y=None):
         """  Moves particles and tests for collisions with the walls and each other """
 
         for i, particle in enumerate(self.particles):
+            print(particle.angle)
+            if x and y:
+                p = self.findParticle(x, y)
+                if p:
+                    p.mouseMove(x, y)
+
             for f in self.particle_functions1:
                 f(particle)
             for particle2 in self.particles[i + 1:]:
@@ -185,10 +193,21 @@ class Environment:
             particle.angle = math.pi - particle.angle
             particle.speed *= self.elasticity
 
-        elif particle.y < particle.size:
-            particle.y = 2 * particle.size - particle.y
-            particle.angle = math.pi - particle.angle
-            particle.speed *= self.elasticity
+    def no_boundries(self, particle):
+        """ when particle hits wall it comes out the other side"""
+
+        if particle.x > self.width - particle.size and (0 < particle.angle < math.pi):
+            particle.x = particle.x + particle.size - self.width
+
+        elif particle.x < particle.size and (math.pi < particle.angle < math.pi * 2):
+            particle.x = (particle.x - particle.size) + self.width
+
+        if particle.y > self.height - particle.size and (math.pi * 0.5 < particle.angle < math.pi * 1.5):
+            particle.y = particle.y + particle.size - self.height
+
+        elif particle.y < particle.size and (
+                math.pi * 1.5 < particle.angle <= math.pi * 2 or 0 <= particle.angle <= math.pi * 0.5):
+            particle.y = self.height - particle.size
 
     def findParticle(self, x, y):
         """ Returns any particle that occupies position x, y """
