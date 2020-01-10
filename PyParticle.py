@@ -2,6 +2,20 @@ import math
 import random
 
 
+def calculate_vectors(pos_queue):
+    if (len(pos_queue) == 1):
+        return (0, 0)
+    for num in range(len(pos_queue) - 1, 0, -1):
+        dx = pos_queue[num][0] - pos_queue[num - 1][0]
+        dy = pos_queue[num][1] - pos_queue[num - 1][1]
+        # pdb.set_trace()
+
+        angle = math.atan2(dy, dx) + 0.5 * math.pi
+        speed = math.hypot(dx, dy) * 0.01
+        print(speed, angle)
+        return speed, angle
+
+
 def addVectors(angle1, length1, angle2, length2):
     """ Returns the sum of two vectors """
 
@@ -79,11 +93,15 @@ class Particle:
 
     def mouseMove(self, x, y):
         """ Change angle and speed to move towards a given point """
-
         dx = x - self.x
         dy = y - self.y
         self.angle = 0.5 * math.pi + math.atan2(dy, dx)
         self.speed = math.hypot(dx, dy) * 0.1
+
+    def move_particle_W_mouse(self, x, y):
+        """ Change angle and speed to move towards a given point """
+        self.x = x
+        self.y = y
 
     def accelerate(self, vector):
         """ Change angle and speed by a given vector """
@@ -163,11 +181,17 @@ class Environment:
         """  Moves particles and tests for collisions with the walls and each other """
 
         for i, particle in enumerate(self.particles):
-            print(particle.angle)
-            if x and y:
-                p = self.findParticle(x, y)
-                if p:
-                    p.mouseMove(x, y)
+            if 'chosen' in particle.__dict__:
+                if particle.chosen:
+                    particle.move_particle_W_mouse(x, y)
+                else:
+                    # pdb.set_trace()
+                    speed, angle = calculate_vectors(particle.past_moves)
+                    print("I am here")
+                    particle.speed = speed
+                    particle.angle = angle
+                    del particle.__dict__['chosen']
+                    del particle.__dict__['past_moves']
 
             for f in self.particle_functions1:
                 f(particle)

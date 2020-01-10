@@ -3,7 +3,7 @@
 Testing out physics simulations using python.
 
 Example:
-        $ python galaxy.py
+        $ python testing_catching_and_throwing.py
 
 Todo:
     * Make is so as long as mouse button is pressed particle doesn't fly out
@@ -21,7 +21,7 @@ pygame.display.set_caption('Star formation')
 
 universe = PyParticle.Environment(width, height)
 universe.colour = (0, 0, 0)
-universe.addFunctions(['move', 'attract', 'combine', 'no_boundry'])
+universe.addFunctions(['move', 'combine', 'no_boundry'])
 
 
 def calculateRadius(mass):
@@ -38,28 +38,39 @@ def floatRgb(mag, cmin, cmax):
     blue = min((max((4 * (0.75 - x), 0.)), 1.))
     red = min((max((4 * (x - 0.25), 0.)), 1.))
     green = min((max((4 * math.fabs(x - 0.5) - 1., 0.)), 1.))
-    return int(red * 255), int(green * 255), int(blue * 255)
+    return int(red * 255), int(green * 0), int(blue * 255)
 
 
-for p in range(200):
+for p in range(1):
     particle_mass = random.randint(1, 10)
     particle_size = calculateRadius(particle_mass)
-    universe.addParticles(mass=particle_mass, speed=0.01, size=particle_size, colour=(255, 255, 255))
+    universe.addParticles(mass=particle_mass, speed=0.01, size=10, colour=(255, 255, 255))
 
 running = True
-mouseX, mouseY = None, None
+mouseX, mouseY, selected_particle = None, None, None
 button_pressed = False
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN or button_pressed:
-            button_pressed = True
-            print("mouse pressed")
+            # print("mouse pressed")
             (mouseX, mouseY) = pygame.mouse.get_pos()
-            selected_particle = universe.findParticle(mouseX, mouseY)
+            if not button_pressed:  # I want to only choose a new particle if the button is pressed for the first time
+                selected_particle = universe.findParticle(mouseX, mouseY)
+                if selected_particle:
+                    selected_particle.chosen = True  # I add a new attribute here - "chosen"
+                    selected_particle.past_moves = [(-1, -1)]
+            button_pressed = True
+            if selected_particle:
+                if not (selected_particle.past_moves[-1] == pygame.mouse.get_pos()):
+                    selected_particle.past_moves.append(pygame.mouse.get_pos())
         if event.type == pygame.MOUSEBUTTONUP:
             button_pressed = False
+            if selected_particle:
+                selected_particle.chosen = False
+                print(selected_particle.past_moves)
+            (mouseX, mouseY) = pygame.mouse.get_pos()
 
     universe.update(mouseX, mouseY)
     screen.fill(universe.colour)
