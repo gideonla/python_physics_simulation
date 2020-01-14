@@ -16,6 +16,14 @@ def calculate_vectors(pos_queue):
         return speed, angle
 
 
+def calculate_speed_angle(x1, y1, x2, y2):
+    dx = x2 - x1
+    dy = y2 - y1
+    angle = math.atan2(dy, dx) + 0.5 * math.pi
+    speed = math.hypot(dx, dy) * 0.01
+    return speed, angle
+
+
 def addVectors(angle1, length1, angle2, length2):
     """ Returns the sum of two vectors """
 
@@ -182,16 +190,12 @@ class Environment:
 
         for i, particle in enumerate(self.particles):
             if 'chosen' in particle.__dict__:
-                if particle.chosen:
+                if particle.chosen:  # The particle is chosen while the mouse is still clicking the particle
                     particle.move_particle_W_mouse(x, y)
-                else:
-                    # pdb.set_trace()
-                    speed, angle = calculate_vectors(particle.past_moves)
-                    print("I am here")
-                    particle.speed = speed
-                    particle.angle = angle
+                else:  # the particle is chosen but no longer clicked on
+                    particle.speed, particle.angle = calculate_speed_angle(particle.dq[0][0], particle.dq[0][1],
+                                                                           particle.dq[-1][0], particle.dq[-1][1])
                     del particle.__dict__['chosen']
-                    del particle.__dict__['past_moves']
 
             for f in self.particle_functions1:
                 f(particle)

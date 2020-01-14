@@ -10,6 +10,7 @@ Todo:
 """
 import math
 import random
+from collections import deque as dq
 
 import pygame
 
@@ -50,28 +51,31 @@ running = True
 mouseX, mouseY, selected_particle = None, None, None
 button_pressed = False
 while running:
+    (mouseX, mouseY) = pygame.mouse.get_pos()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN or button_pressed:
-            # print("mouse pressed")
             (mouseX, mouseY) = pygame.mouse.get_pos()
             if not button_pressed:  # I want to only choose a new particle if the button is pressed for the first time
                 selected_particle = universe.findParticle(mouseX, mouseY)
-                if selected_particle:
+                if selected_particle:  # I need this IF statement here B/C if the mouse clicks empty space then there is no selected particle
                     selected_particle.chosen = True  # I add a new attribute here - "chosen"
-                    selected_particle.past_moves = [(-1, -1)]
-            button_pressed = True
-            if selected_particle:
-                if not (selected_particle.past_moves[-1] == pygame.mouse.get_pos()):
-                    selected_particle.past_moves.append(pygame.mouse.get_pos())
+                    selected_particle.dq = dq(
+                        maxlen=100)  # save the last 100 positions to calculate speed, create this only once
+                    selected_particle.dq.append(pygame.mouse.get_pos())
+                button_pressed = True
+
         if event.type == pygame.MOUSEBUTTONUP:
             button_pressed = False
             if selected_particle:
+                print("particle position:", selected_particle.x, selected_particle.y)
                 selected_particle.chosen = False
-                print(selected_particle.past_moves)
-            (mouseX, mouseY) = pygame.mouse.get_pos()
-
+                selected_particle.dq.append(pygame.mouse.get_pos())
+    if button_pressed and selected_particle:  # button pressed
+        selected_particle.dq.append(pygame.mouse.get_pos())
+        print(selected_particle.dq)
+    # print ("mouse x&Y:",mouseX, mouseY)
     universe.update(mouseX, mouseY)
     screen.fill(universe.colour)
 
