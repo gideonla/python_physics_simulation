@@ -56,15 +56,18 @@ for p in range(100):
     universe.addParticles(mass=particle_mass, size=particle_size, speed=0, colour=(255, 255, 255))
 
 running = True
+paused = False
 while running:
     for event in pygame.event.get():
         if event.type == pygame.KEYDOWN:
             if event.key in key_move_map:
                 key_move_map[event.key](universe_screen)
+            elif event.key == pygame.K_SPACE:
+                paused = not paused
         if event.type == pygame.QUIT:
             running = False
-
-    universe.update()
+    if not paused:
+        universe.update()
     screen.fill(universe.colour)
 
     particles_to_remove = []
