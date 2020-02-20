@@ -130,6 +130,24 @@ class Particle:
         self.accelerate((theta - 0.5 * math.pi, force / self.mass))
         other.accelerate((theta + 0.5 * math.pi, force / other.mass))
 
+class Spring:
+    def __init__(self, p1, p2, length=50, strength=0.5):
+        self.p1 = p1
+        self.p2 = p2
+        self.length = length
+        self.strength = strength
+
+    def update(self):
+        dx = self.p1.x - self.p2.x
+        dy = self.p1.y - self.p2.y
+        dist = math.hypot(dx, dy)
+        theta = math.atan2(dy, dx)
+        force = (self.length - dist) * self.strength
+
+        self.p1.accelerate((theta + 0.5 * math.pi, force / self.p1.mass))
+        self.p2.accelerate((theta - 0.5 * math.pi, force / self.p2.mass))
+
+
 
 class Environment:
     """ Defines the boundary of a simulation and its properties """
@@ -138,6 +156,7 @@ class Environment:
         self.width = width
         self.height = height
         self.particles = []
+        self.springs = []
 
         self.colour = (255, 255, 255)
         self.mass_of_air = 0.2
@@ -156,6 +175,10 @@ class Environment:
             'collide': (2, lambda p1, p2: collide(p1, p2)),
             'combine': (2, lambda p1, p2: combine(p1, p2)),
             'attract': (2, lambda p1, p2: p1.attract(p2))}
+
+    def addSpring(self, p1, p2, length=50, strength=0.5):
+        """ Add a spring between particles p1 and p2 """
+        self.springs.append(Spring(self.particles[p1], self.particles[p2], length, strength))
 
     def addFunctions(self, function_list):
         for func in function_list:
@@ -181,20 +204,25 @@ class Environment:
             particle.speed = kargs.get('speed', random.random())
             particle.angle = kargs.get('angle', random.uniform(0, math.pi * 2))
             particle.colour = kargs.get('colour', (0, 0, 255))
+            particle.elasticity = kargs.get('elasticity', 1)
             particle.drag = (particle.mass / (particle.mass + self.mass_of_air)) ** particle.size
 
             self.particles.append(particle)
 
     def update(self, x=None, y=None):
         """  Moves particles and tests for collisions with the walls and each other """
+        for spring in self.springs:
+            spring.update()
 
         for i, particle in enumerate(self.particles):
             if 'chosen' in particle.__dict__:
                 if particle.chosen:  # The particle is chosen while the mouse is still clicking the particle
                     particle.move_particle_W_mouse(x, y)
+                    speed,angle = calculate_speed_angle(particle.dq[-2][0], particle.dq[-2][1],particle.dq[-1][0], particle.dq[-1][1])
+                    particle.speed_dq.append((speed,angle))
                 else:  # the particle is chosen but no longer clicked on
-                    particle.speed, particle.angle = calculate_speed_angle(particle.dq[0][0], particle.dq[0][1],
-                                                                           particle.dq[-1][0], particle.dq[-1][1])
+                    # for calculating speed 
+                    particle.speed, particle.angle = calculate_speed_angle(particle.dq[-15][0], particle.dq[-15][1],particle.dq[-10][0], particle.dq[-1][1])
                     del particle.__dict__['chosen']
 
             for f in self.particle_functions1:
@@ -209,17 +237,26 @@ class Environment:
         if particle.x > self.width - particle.size:
             particle.x = 2 * (self.width - particle.size) - particle.x
             particle.angle = - particle.angle
-            particle.speed *= self.elasticity
+            particle.speed *= self.elasticity*particle.elasticity
 
         elif particle.x < particle.size:
             particle.x = 2 * particle.size - particle.x
             particle.angle = - particle.angle
-            particle.speed *= self.elasticity
+            particle.speed *= self.elasticity*particle.elasticity
 
         if particle.y > self.height - particle.size:
             particle.y = 2 * (self.height - particle.size) - particle.y
             particle.angle = math.pi - particle.angle
-            particle.speed *= self.elasticity
+            particle.speed *= self.elasticity*particle.elasticity
+            print(self.elasticity,particle.speed)
+
+        elif particle.y < particle.size:
+            particle.y = 2 * particle.size - particle.y
+            particle.angle = math.pi - particle.angle
+            particle.speed *= self.elasticity*particle.elasticity
+
+
+
 
     def no_boundries(self, particle):
         """ when particle hits wall it comes out the other side"""
@@ -244,3 +281,5 @@ class Environment:
             if math.hypot(particle.x - x, particle.y - y) <= particle.size:
                 return particle
         return None
+
+
