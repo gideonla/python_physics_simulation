@@ -62,8 +62,10 @@ while running:
                 if selected_particle:  # I need this IF statement here B/C if the mouse clicks empty space then there is no selected particle
                     selected_particle.chosen = True  # I add a new attribute here - "chosen"
                     selected_particle.dq = dq(
-                        maxlen=100)  # save the last 100 positions to calculate speed, create this only once
+                        maxlen=500)  # save the last 100 positions to calculate speed, create this only once
+                    selected_particle.speed_dq = dq(maxlen=500)  # save the last 100 positions to calculate speed, create this only once
                     selected_particle.dq.append(pygame.mouse.get_pos())
+                    selected_particle.dq.append(pygame.mouse.get_pos()) # For the first click I am pushing two positions so I don't get an error calculating the particle speed
                 button_pressed = True
 
         if event.type == pygame.MOUSEBUTTONUP:
@@ -72,9 +74,10 @@ while running:
                 print("particle position:", selected_particle.x, selected_particle.y)
                 selected_particle.chosen = False
                 selected_particle.dq.append(pygame.mouse.get_pos())
-    if button_pressed and selected_particle:  # button pressed
+    if button_pressed and selected_particle:  # We still are selecting a particle
         selected_particle.dq.append(pygame.mouse.get_pos())
         print(selected_particle.dq)
+        print(selected_particle.speed_dq)
     # print ("mouse x&Y:",mouseX, mouseY)
     universe.update(mouseX, mouseY)
     screen.fill(universe.colour)
@@ -87,6 +90,9 @@ while running:
             del p.__dict__['collide_with']
         p.colour = floatRgb(p.size, 0, 10)
         # pdb.set_trace()
+        if selected_particle and button_pressed:
+            for i in selected_particle.dq:
+                pygame.draw.circle(screen, p.colour, (int(i[0]), int(i[1])), 1,1)
 
         if p.size < 2:
             pygame.draw.rect(screen, p.colour, (int(p.x), int(p.y), 2, 2))
